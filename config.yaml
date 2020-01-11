@@ -1,0 +1,2 @@
+port: COM10
+baudRate: 9600
