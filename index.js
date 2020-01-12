@@ -3,6 +3,11 @@ process.stdout.write("\u001b[2J\u001b[0;0H")
 const SerialPort = require('serialport')
 const colors = require('colors')
 const fs = require('fs')
+const app = require('express')()
+const http = require('http').createServer(app)
+const io = require('socket.io')(http)
+
+
 const config = {}
 const readline = require('readline').createInterface({
 	input: process.stdin,
@@ -54,36 +59,90 @@ const main = async ()=>{
 		console.log('\nNo baud rate provided in config.yaml'.bold)
 		baudRate = Number(await input('Set baud rate:'))
 	}
-
+	let port
 	console.log('\nBaud rate:'.green, String(baudRate).green, '\n')
+	const connectToSerial = (i=0)=>{
+		let statusEmitInterval = null
+		let manualPortClose = false
+		
+		port = new SerialPort('\\.\\' + selectedPort, {baudRate})
+		port.on('error', (err)=>{	
+			if (i) {
+				process.stdout.clearLine()
+				process.stdout.cursorTo(0)
+				process.stdout.write('Attempting to connect to serial port...'.bold)
+				process.stdout.write(String(' ('+i+')').bold)
+			}
+			io.emit('portStatus', {status: 'closed', selectedPort, baudRate})
+			if (statusEmitInterval) clearInterval(statusEmitInterval)
+			i++
+			setTimeout(()=>port.open(), 2000)
+		})
+		let dataBuffer = ""
+		port.on('open', (e)=>{
+			i = 0
+			console.log('\nConnected to serial port'.green.bold)
+			if (statusEmitInterval) clearInterval(statusEmitInterval)
+			statusEmitInterval = setInterval(() => {
+				io.emit('portStatus', {status: 'open', selectedPort, baudRate})
+			}, 2000);
+			io.emit('portStatus', {status: 'open', selectedPort, baudRate})	
+		})
+		port.on('data', (rawData)=>{
+			let dr = rawData.toString()
+			let d = dr.split('#')
+			dataBuffer += d[0]
+			if (dataBuffer && dr.indexOf('#')!==-1){
+				//process.stdout.clearLine()
+				//process.stdout.cursorTo(0)
+				//process.stdout.write(dataBuffer)
+				io.emit('data', dataBuffer)
+				dataBuffer = d[1]
+			}
+		})
+		port.on('close', (e)=>{
+			if (statusEmitInterval) clearInterval(statusEmitInterval)
+			if (manualPortClose){
+				io.emit('portStatus', {status: 'manual-closed', selectedPort, baudRate})
+				statusEmitInterval = setInterval(() => {
+					io.emit('portStatus', {status: 'manual-closed', selectedPort, baudRate})
+				}, 2000);
+			} else {
+				console.log('Lost connection to serial port'.red)
+				port.open()
+			}
+		})
+		io.on('connection', (socket)=>{
+			socket.on("port-close", ()=>{
+				manualPortClose = true
+				console.log('Port manually disconnected'.bold)
+				//io.emit('portStatus', {status: 'closed', selectedPort, baudRate})
+				port.close()
+			})
+			socket.on("port-open", ()=>{
+				manualPortClose = false
+				console.log('Port manually opened'.green)
+				io.emit('portStatus', {status: null, selectedPort, baudRate})
+				if (statusEmitInterval) clearInterval(statusEmitInterval)
+				port.open()
+			})
+		})
+	}
 
-	const port = new SerialPort('\\.\\' + selectedPort, {baudRate})
-	port.on('error', (err)=>{
-		console.log(String(err).red)
+	connectToSerial()
+	
+	app.get('/', (req, res)=>{
+		res.send('<h1>Hello world</h1>');
 	})
-	let dataBuffer = ""
-	port.on('data', (rawData)=>{
-		let dr = rawData.toString()
-		let d = dr.split('#')
-		dataBuffer += d[0]
-		if (dataBuffer && dr.indexOf('#')!==-1){
-			process.stdout.clearLine()
-			process.stdout.cursorTo(0)
-			process.stdout.write(dataBuffer)
-			dataBuffer = d[1]
-		}
-		//process.stdout.clearLine()
-		//process.stdout.cursorTo(0)
-		//process.stdout.write(rawData.toString())
-		/* let d = rawData.toString().split(' ')
-		let data = {
-			lat: d[0],
-			lon: d[1],
-			uv1: d[2],
-			uv2: d[3],
-			uv3: d[4]
-		} */
+
+	http.listen(8000, ()=>{
+		//console.log('listening on *:8000');
 	})
+
+	io.on('connection', (socket)=>{
+		console.log('\nWeb client connected'.green)
+	})
+	
 }
 
 main()
