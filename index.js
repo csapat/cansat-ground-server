@@ -91,12 +91,29 @@ const main = async ()=>{
 		port.on('data', (rawData)=>{
 			let dr = rawData.toString()
 			let d = dr.split('#')
+			//console.log(dr)
 			dataBuffer += d[0]
+			//console.log(dataBuffer)
 			if (dataBuffer && dr.indexOf('#')!==-1){
 				//process.stdout.clearLine()
 				//process.stdout.cursorTo(0)
 				//process.stdout.write(dataBuffer)
-				io.emit('data', dataBuffer)
+				console.log(dataBuffer)
+				let sd = dataBuffer.split(" ").map(i=>Number(i))			
+				//console.log(sd.length)
+				if (sd.length==11){
+					console.log(sd)
+					let dataObj = {
+						lat: isNaN(sd[0]) ? 0 : sd[0],
+						lon: isNaN(sd[1]) ? 0 : sd[1],
+						temp1: sd[2],
+						temp2: sd[3],
+						temp3: sd[4],
+						acc: {x: sd[5], y: sd[6], z: sd[7]},
+						mag: {x: sd[8], y: sd[9], z: sd[10]}
+					}		
+					io.emit('data', JSON.stringify(dataObj))
+				}
 				dataBuffer = d[1]
 			}
 		})

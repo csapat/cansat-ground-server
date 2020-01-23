@@ -1,2 +1,2 @@
-port: COM10
+port: COM5
 baudRate: 9600
