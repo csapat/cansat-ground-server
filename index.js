@@ -98,21 +98,33 @@ const main = async ()=>{
 				//process.stdout.clearLine()
 				//process.stdout.cursorTo(0)
 				//process.stdout.write(dataBuffer)
-				console.log(dataBuffer)
-				let sd = dataBuffer.split(" ").map(i=>Number(i))			
+				//console.log(dataBuffer)
+				let sd = dataBuffer.split(" ").map(i=>Number(i))
+				//console.log(dataBuffer)
 				//console.log(sd.length)
-				if (sd.length==11){
-					console.log(sd)
+				if (sd.length==20){
+					
 					let dataObj = {
 						lat: isNaN(sd[0]) ? 0 : sd[0],
 						lon: isNaN(sd[1]) ? 0 : sd[1],
+						alt: sd[14],
+						course: sd[19]/100,
 						temp1: sd[2],
 						temp2: sd[3],
 						temp3: sd[4],
 						acc: {x: sd[5], y: sd[6], z: sd[7]},
-						mag: {x: sd[8], y: sd[9], z: sd[10]}
-					}		
+						mag: {x: sd[8], y: sd[9], z: sd[10]},
+						gyro: {x: sd[16], y: sd[17], z: sd[18]},
+						roll: sd[11],
+						pitch: sd[12],
+						yaw: sd[13],
+						loop: sd[15],
+						time: new Date().getTime()
+					}
+					console.log(sd[19])
 					io.emit('data', JSON.stringify(dataObj))
+				} else {
+					console.log('Received data with length of', sd.length)
 				}
 				dataBuffer = d[1]
 			}
