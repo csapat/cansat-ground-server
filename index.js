@@ -19,6 +19,30 @@ const input = (question)=>{
 		readline.question(question+" ", (q)=>resolve(q))
 	})
 }
+
+/*readline.on("line", () => {
+	let dataObj = {
+		course: Math.random()*2*Math.PI,
+		lat: 2*(Math.random()-0.5)*90,
+		lon: 2*(Math.random()-0.5)*90,
+		alt: Math.random()*1000,
+		temp1: Math.random()*50,
+		temp2: Math.random()*50,
+		temp3: Math.random()*50,
+		acc: {x: Math.random(), y: Math.random(), z: Math.random()},
+		mag: {x: Math.random(), y: Math.random(), z: Math.random()},
+		gyro: {x: Math.random(), y: Math.random(), z: Math.random()},
+		roll: Math.random()*2*Math.PI,
+		pitch: Math.random()*2*Math.PI,
+		yaw: Math.random()*2*Math.PI,
+		pressure: Math.random()*1000000,
+		humidity: Math.random(),
+		uv: Math.random(),
+		loop: Math.random()*5,
+		time: new Date().getTime()
+	}
+	io.emit('data', JSON.stringify(dataObj))
+})*/
   
 fs.readFileSync('./config.yaml', 'UTF-8').split('\n').map(row=>{
 	config[row.split(':')[0]] = row.split(':')[1].trim()
@@ -91,37 +115,30 @@ const main = async ()=>{
 		port.on('data', (rawData)=>{
 			let dr = rawData.toString()
 			let d = dr.split('#')
-			//console.log(dr)
 			dataBuffer += d[0]
-			//console.log(dataBuffer)
-			if (dataBuffer && dr.indexOf('#')!==-1){
-				//process.stdout.clearLine()
-				//process.stdout.cursorTo(0)
-				//process.stdout.write(dataBuffer)
-				//console.log(dataBuffer)
+			if (dataBuffer && dr.indexOf('#')>-1){
 				let sd = dataBuffer.split(" ").map(i=>Number(i))
-				//console.log(dataBuffer)
-				//console.log(sd.length)
-				if (sd.length==20){
-					
+				if (sd.length==23){
 					let dataObj = {
-						lat: isNaN(sd[0]) ? 0 : sd[0],
-						lon: isNaN(sd[1]) ? 0 : sd[1],
-						alt: sd[14],
-						course: sd[19]/100,
-						temp1: sd[2],
-						temp2: sd[3],
-						temp3: sd[4],
-						acc: {x: sd[5], y: sd[6], z: sd[7]},
-						mag: {x: sd[8], y: sd[9], z: sd[10]},
-						gyro: {x: sd[16], y: sd[17], z: sd[18]},
-						roll: sd[11],
-						pitch: sd[12],
-						yaw: sd[13],
-						loop: sd[15],
+						course: sd[0]/100,
+						lat: isNaN(sd[1]) ? 0 : sd[1],
+						lon: isNaN(sd[2]) ? 0 : sd[2],
+						alt: sd[3],
+						temp1: sd[4],
+						temp2: sd[5],
+						temp3: sd[6],
+						acc: {x: sd[7], y: sd[8], z: sd[9]},
+						mag: {x: sd[10], y: sd[11], z: sd[12]},
+						gyro: {x: sd[13], y: sd[14], z: sd[15]},
+						roll: sd[16],
+						pitch: sd[17],
+						yaw: sd[18],
+						pressure: sd[19],
+						humidity: sd[20],
+						uv: sd[21],
+						loop: sd[22],
 						time: new Date().getTime()
 					}
-					console.log(sd[19])
 					io.emit('data', JSON.stringify(dataObj))
 				} else {
 					console.log('Received data with length of', sd.length)
@@ -145,7 +162,6 @@ const main = async ()=>{
 			socket.on("port-close", ()=>{
 				manualPortClose = true
 				console.log('Port manually disconnected'.bold)
-				//io.emit('portStatus', {status: 'closed', selectedPort, baudRate})
 				port.close()
 			})
 			socket.on("port-open", ()=>{
@@ -164,9 +180,7 @@ const main = async ()=>{
 		res.send('<h1>Hello world</h1>');
 	})
 
-	http.listen(8000, ()=>{
-		//console.log('listening on *:8000');
-	})
+	http.listen(8000, ()=>{})
 
 	io.on('connection', (socket)=>{
 		console.log('\nWeb client connected'.green)
