@@ -19,8 +19,14 @@ const input = (question)=>{
 		readline.question(question+" ", (q)=>resolve(q))
 	})
 }
+let now = new Date()
+const fileName = now.getFullYear() + '-' + (now.getMonth() < 9 ? '0' + now.getMonth() : now.getMonth()) + '-' +(now.getDay() < 9 ? '0' + now.getDay() : now.getDay()) + 'T' + (now.getHours() < 9 ? '0' + now.getHours() : now.getHours()) + '-' + (now.getMinutes() < 9 ? '0' + now.getMinutes() : now.getMinutes()) + '-' + (now.getSeconds() < 9 ? '0' + now.getSeconds() : now.getSeconds())
 
-/*readline.on("line", () => {
+const fileStream = fs.createWriteStream("log/" + fileName + ".txt", {flags:'a'});
+
+
+/*
+readline.on("line", () => {
 	let dataObj = {
 		course: Math.random()*2*Math.PI,
 		lat: 2*(Math.random()-0.5)*90,
@@ -42,8 +48,8 @@ const input = (question)=>{
 		time: new Date().getTime()
 	}
 	io.emit('data', JSON.stringify(dataObj))
-})*/
-  
+})
+*/
 fs.readFileSync('./config.yaml', 'UTF-8').split('\n').map(row=>{
 	config[row.split(':')[0]] = row.split(':')[1].trim()
 })
@@ -118,7 +124,8 @@ const main = async ()=>{
 			dataBuffer += d[0]
 			if (dataBuffer && dr.indexOf('#')>-1){
 				let sd = dataBuffer.split(" ").map(i=>Number(i))
-				if (sd.length==23){
+				if (sd.length==21){
+					/*
 					let dataObj = {
 						course: sd[0]/100,
 						lat: isNaN(sd[1]) ? 0 : sd[1],
@@ -139,7 +146,34 @@ const main = async ()=>{
 						loop: sd[22],
 						time: new Date().getTime()
 					}
-					io.emit('data', JSON.stringify(dataObj))
+					*/
+					let dataObj = {
+						bme_temperature: sd[0],
+						bme_pressure: sd[1],
+						bme_altitude: sd[2],
+						bme_humidity: sd[3],
+						
+						mpu_temperature: sd[4],
+						mpu_accel: {x: sd[5], y: sd[6], z: sd[7]},
+						//mpu_mag: {x: sd[8], y: sd[9], z: sd[10]},
+						mpu_gyro: {x: sd[11], y: sd[12], z: sd[13]},
+						//gyro: {x: sd[13], y: sd[14], z: sd[15]},
+						gas_value: sd[14],
+						gps_latitude: sd[15],
+						gps_longtitude: sd[16],
+						gps_altitude: sd[17],
+						gps_course: sd[18],
+						version: String(sd[sd.length-2]),
+						signal_strength: sd[sd.length-1],
+						time: new Date().getTime()
+					}
+					filteredDataObject = {}
+					Object.keys(dataObj).map(key=>{
+						filteredDataObject[key] = typeof dataObj[key] != 'object' && isNaN(dataObj[key]) ? -1 : dataObj[key]
+					})
+					let dataString = JSON.stringify(filteredDataObject)
+					io.emit('data', dataString)
+					fileStream.write(dataString + "\n")
 				} else {
 					console.log('Received data with length of', sd.length)
 				}
